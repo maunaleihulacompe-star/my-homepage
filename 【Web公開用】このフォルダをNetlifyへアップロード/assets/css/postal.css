@@ -1,0 +1,8 @@
+.postal-status{display:block;margin-top:4px;color:#6d675d;font-size:12px}
+.postal-status.searching{color:#846312}
+.postal-status.success{color:#20713a}
+.postal-status.error{color:#a12828}
+.phone-compact input{max-width:320px}
+.postal-compact input{max-width:220px}
+@media(max-width:620px){.phone-compact input,.postal-compact input{max-width:100%}}
+.form-status strong{display:block;margin-bottom:6px;text-align:center;font-size:1.25em;font-weight:900}

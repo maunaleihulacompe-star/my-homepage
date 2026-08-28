@@ -1,0 +1,21 @@
+.embedded-forms{background:#f8f5ec}
+.form-shell.embedded{width:100%;margin:0;padding:24px}
+.form-shell.embedded .form-card{box-shadow:none}
+.form-disclosure{border:1px solid var(--line);margin:18px 0;background:#fff}
+.form-disclosure>summary{padding:20px 24px;background:var(--theme);color:#fff;font-size:20px;font-weight:900;list-style:none}
+.form-disclosure>summary::-webkit-details-marker{display:none}
+.form-disclosure>summary:after{content:"＋";float:right}
+.form-disclosure[open]>summary:after{content:"−"}
+.application-block{max-width:900px;margin:24px auto 38px;padding:26px;background:#fff;border:1px solid var(--line)}
+.application-block>h3{text-align:center;font-size:25px;color:var(--theme);margin:0 0 12px}
+.document-actions{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:10px 0 24px;text-align:center}
+.document-actions p{margin:0 0 13px;font-weight:800}
+.document-actions .button{min-width:280px}
+.online-form-action{display:flex;justify-content:center;padding-top:20px;border-top:1px dashed #bbb}
+.online-form-action .button{min-width:360px}
+@media(max-width:620px){
+  .form-shell.embedded{padding:10px}
+  .form-disclosure>summary{padding:17px;font-size:17px}
+  .application-block{padding:22px 16px}
+  .document-actions .button,.online-form-action .button{width:100%;min-width:0;padding:11px 14px;text-align:center;white-space:normal;line-height:1.45;overflow-wrap:anywhere}
+}

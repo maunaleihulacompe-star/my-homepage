@@ -1,0 +1,22 @@
+body.theme-home{--theme:#31500e;--theme2:#55791d;--accent:#e94814;--soft:#fff2ad}
+body.theme-competition{--theme:#284b12;--theme2:#557f21;--accent:#ef6c20;--soft:#f4edbd}
+body.theme-lei-photo{--theme:#74435a;--theme2:#a75d78;--accent:#c99832;--soft:#f7e8ee}
+body.theme-vendor{--theme:#16324a;--theme2:#167a78;--accent:#e7783e;--soft:#e5f1ef}
+body:not(.theme-home) .brand{color:var(--theme)}
+body:not(.theme-home) .menu-button{background:var(--theme)}
+body:not(.theme-home) .page-hero{background:linear-gradient(135deg,var(--theme),var(--theme2))}
+body:not(.theme-home) .page-hero .eyebrow{color:#ffe5a1}
+body:not(.theme-home) .section-head .eyebrow,body:not(.theme-home) .card .tag{color:var(--accent)}
+body:not(.theme-home) .facts .card{border-top-color:var(--theme)}
+body:not(.theme-home) .alt{background:var(--soft)}
+body:not(.theme-home) .button:not(.line):not(.pending){background:var(--accent)}
+body.theme-lei-photo .dark{background:#5d394a}
+body.theme-vendor .navy{background:#16324a}
+.contact .line-contact{display:inline-flex;min-width:220px}
+.theme-home .hero{position:relative;isolation:isolate}
+.theme-home .hero:before{content:"";position:absolute;z-index:0;inset:0;background:url("../images/maunalei-illustration.png") center/130% auto no-repeat;opacity:.14;mix-blend-mode:multiply;pointer-events:none}
+.theme-home .hero-grid{position:relative;z-index:1;grid-template-columns:1fr}
+.theme-home .hero-grid>div{max-width:790px}
+.theme-home .hero .illustration{display:none}
+@media(max-width:560px){.contact .line-contact{width:min(100%,300px)}}
+@media(max-width:820px){.theme-home .hero:before{inset:0;background-position:center;background-size:auto 135%;opacity:.1}.theme-home .hero-grid>div{max-width:none}}

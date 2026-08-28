@@ -1,0 +1,9 @@
+.site-footer a{display:inline-block;margin-top:7px;color:#fff;text-underline-offset:3px}
+.policy{max-width:900px}
+.policy section{margin:0 0 34px;padding:28px;background:#fff;border:1px solid var(--line)}
+.policy h2{margin:0 0 12px;font-size:clamp(24px,4vw,34px)}
+.policy h3{margin:22px 0 6px}
+.policy ul{padding-left:1.4em}
+.policy address{font-style:normal}
+.policy .policy-meta{padding:20px 24px;background:#fff2ad;border-left:5px solid var(--orange)}
+@media(max-width:560px){.policy section{padding:22px 20px}}

@@ -1,0 +1,16 @@
+Googleスプレッドシート・メール通知の設定手順
+
+1. Googleドライブで新しいスプレッドシートを作成します。
+2. スプレッドシートのURLにある /d/ と /edit の間の文字列をコピーします。
+3. 拡張機能 → Apps Script を開きます。
+4. Code.gsの内容を貼り付け、SPREADSHEET_IDへ2でコピーしたIDを入力します。
+5. 「デプロイ」→「新しいデプロイ」→種類「ウェブアプリ」を選びます。
+6. 実行ユーザーは「自分」、アクセスできるユーザーは「全員」を選び、デプロイします。
+7. 表示されたウェブアプリURLをコピーします。
+8. apply-lei.html、apply-photo.html、apply-vendor.html、apply-ad.htmlにある
+   YOUR_GOOGLE_APPS_SCRIPT_URL を、7のURLへ置き換えます。
+
+回答は種類ごとに「レイ申込」「フォト申込」「出店申込」「広告申込」シートへ保存されます。
+新規回答は maunaleihulacompe@gmail.com へ通知され、申込者へも自動返信されます。
+
+注意：初回デプロイ時はGoogleから権限確認が表示されます。
