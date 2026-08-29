@@ -18,5 +18,5 @@ body.theme-vendor .navy{background:#3B5860}
 .theme-home .hero-grid{position:relative;z-index:1;grid-template-columns:1fr}
 .theme-home .hero-grid>div{max-width:790px}
 .theme-home .hero .illustration{display:none}
-@media(max-width:560px){.contact .line-contact{width:min(100%,300px)}}
+@media(max-width:560px){.contact .line-contact{width:100%}}
 @media(max-width:820px){.theme-home .hero:before{inset:0;background-position:center;background-size:auto 135%;opacity:.1}.theme-home .hero-grid>div{max-width:none}}
