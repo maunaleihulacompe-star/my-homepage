@@ -1,11 +1,11 @@
 .hero h1{
-  font-family:"Arial Black","Noto Sans JP","Yu Gothic",sans-serif;
-  font-weight:900;
-  letter-spacing:-.045em;
-  text-shadow:0 3px 0 rgba(255,255,255,.72),0 7px 18px rgba(49,80,14,.16);
+  font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  font-weight:700;
+  letter-spacing:-.01em;
+  text-shadow:0 2px 12px rgba(59,74,50,.10);
 }
 .hero h1 small{
   margin-top:.08em;
-  font-weight:900;
-  letter-spacing:-.035em;
+  font-weight:700;
+  letter-spacing:-.01em;
 }

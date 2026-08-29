@@ -5,5 +5,5 @@
 .policy h3{margin:22px 0 6px}
 .policy ul{padding-left:1.4em}
 .policy address{font-style:normal}
-.policy .policy-meta{padding:20px 24px;background:#fff2ad;border-left:5px solid var(--orange)}
+.policy .policy-meta{padding:20px 24px;background:#F0ECDD;border-left:5px solid var(--orange)}
 @media(max-width:560px){.policy section{padding:22px 20px}}
