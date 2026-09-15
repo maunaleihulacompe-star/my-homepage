@@ -2,6 +2,7 @@ body.theme-home{--theme:#4F6552;--theme2:#7C8B6C;--accent:#C17A56;--soft:#F6D879
 body.theme-competition{--theme:#54684A;--theme2:#7C8B6C;--accent:#C17A56;--soft:#EEEEDF}
 body.theme-lei-photo{--theme:#8A6070;--theme2:#B08494;--accent:#C17A56;--soft:#F3EAEC}
 body.theme-vendor{--theme:#3B5860;--theme2:#5C8078;--accent:#C17A56;--soft:#E9F0EE}
+body.theme-ticket{--theme:#8A5E1E;--theme2:#C79A45;--accent:#C17A56;--soft:#F7EDD9}
 body:not(.theme-home) .brand{color:var(--theme)}
 body:not(.theme-home) .menu-button{background:var(--theme)}
 body:not(.theme-home) .page-hero{background:linear-gradient(135deg,var(--theme),var(--theme2))}

@@ -3,13 +3,17 @@ const NOTIFY_EMAIL = 'maunaleihulacompe@gmail.com';
 const INVOICE_FOLDER_NAME = 'Maunalei2026_請求書';
 const BANK_INFO = 'ゆうちょ銀行\n記号：15480　番号：38175201\n（普通：五四八店　3817520）\n口座名義：マウナレイフラコンペティション事務局（マウナレイフラコンペティションジムキョク）\n※恐れ入りますが、振込手数料はご負担くださいますようお願いいたします。';
 const OFFICE_INFO = 'マウナレイフラコンペティション事務局\n〒700-0822 岡山県岡山市北区表町3-18-52 吉本ビル4F ハウオリーズ マサコ アケタ フラスタジオ内\nTel：086-231-2314　Fax：086-231-2324\nE-mail：maunaleihulacompe@gmail.com';
+const TICKET_PRICE = 7000;
+const TICKET_SHIPPING_FEE = 500;
+const TICKET_ALERT_THRESHOLD = 150;
 
 const FORM_CONFIG = {
   lei: {sheet:'レイ申込',subject:'レイ・コンテスト申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['workTitle','作品タイトル'],['leiStyle','レイのスタイル'],['deliveryMethod','提出方法'],['materials','主な花材'],['comment','作品コメント'],['agreement','規程への同意']]},
   photo: {sheet:'フォト申込',subject:'フォト・コンテスト申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['workTitle1','作品1タイトル'],['workTitleKana1','作品1タイトルふりがな'],['size1','作品1サイズ'],['deliveryMethod1','作品1提出方法'],['comment1','作品1コメント'],['workTitle2','作品2タイトル'],['workTitleKana2','作品2タイトルふりがな'],['size2','作品2サイズ'],['deliveryMethod2','作品2提出方法'],['comment2','作品2コメント'],['agreement','規程への同意']]},
   vendor: {sheet:'出店申込',subject:'会場出店申込',fields:[['businessName','出店登録名'],['businessKana','フリガナ'],['representative','代表者名'],['representativeKana','代表者フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['vendorType','出店形態'],['products','出店内容・取扱商品'],['notes','備考'],['agreement','案内への同意'],['invoiceFileId','請求書ファイルID']]},
-  ad: {sheet:'広告申込',subject:'プログラム広告掲載申込',fields:[['companyName','社名'],['companyKana','フリガナ'],['contactName','担当者名'],['contactKana','担当者フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['adSize','広告サイズ'],['notes','備考'],['agreement','案内への同意'],['invoiceFileId','請求書ファイルID']]},
-  competition: {sheet:'コンペ申込',subject:'コンペ・エキシビション申込',fields:[['harauName','ハラウ名'],['repLastName','代表者氏名（姓）'],['repFirstName','代表者氏名（名）'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['soloCategories','Soloエントリー','multi'],['groupCategories','Groupエントリー','multi'],['exhibition','エキシビションエントリー'],['notes','備考'],['agreement','参加規程への同意']]}
+  ad: {sheet:'広告申込',subject:'プログラム広告掲載申込',fields:[['companyName','社名'],['companyKana','フリガナ'],['contactName','担当者名'],['contactKana','担当者フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['adSize','広告サイズ'],['adAmount','広告掲載料'],['notes','備考'],['agreement','案内への同意'],['invoiceFileId','請求書ファイルID']]},
+  competition: {sheet:'コンペ申込',subject:'コンペ・エキシビション申込',fields:[['harauName','ハラウ名'],['repLastName','代表者氏名（姓）'],['repFirstName','代表者氏名（名）'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['soloCategories','Soloエントリー','multi'],['groupCategories','Groupエントリー','multi'],['exhibition','エキシビションエントリー'],['notes','備考'],['agreement','参加規程への同意']]},
+  ticket: {sheet:'チケット申込',subject:'チケット申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['quantity','枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]}
 };
 
 function getFieldValue(e,item){
@@ -36,11 +40,47 @@ function doPost(e){
     sheet.appendRow(values);
     const rowNum=sheet.getLastRow();
     if(type==='vendor'||type==='ad') createInvoicePdf(type,e,sheet,rowNum);
-    const lines=config.fields.map(item=>item[1]+'：'+getFieldValue(e,item)).join('\n');
-    MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】'+config.subject,body:'Webサイトから申込が届きました。\n\n'+lines});
+    let adSizeLabel='';
+    let adAmountNum=0;
+    if(type==='ad'){
+      const parsedAd=parseAdItem(e.parameter.adSize);
+      adSizeLabel=(e.parameter.adSize||'').replace(/\s*[\d,]+円\s*$/,'');
+      adAmountNum=parsedAd.amount;
+      setCellByHeader(sheet,rowNum,'広告サイズ',adSizeLabel);
+      setCellByHeader(sheet,rowNum,'広告掲載料',adAmountNum);
+    }
+    let ticketAmountText='';
+    let ticketDueDate='';
+    let ticketQty=0;
+    let ticketTotalSold=0;
+    if(type==='ticket'){
+      ticketQty=parseInt(e.parameter.quantity,10);
+      if(!ticketQty||ticketQty<1) ticketQty=1;
+      const amount=ticketQty*TICKET_PRICE+TICKET_SHIPPING_FEE;
+      const due=new Date(Date.now()+14*24*60*60*1000);
+      ticketAmountText=amount.toLocaleString('ja-JP')+'円';
+      ticketDueDate=Utilities.formatDate(due,'Asia/Tokyo','yyyy年MM月dd日');
+      setCellByHeader(sheet,rowNum,'合計金額',amount);
+      setCellByHeader(sheet,rowNum,'お振込期限',ticketDueDate);
+      ticketTotalSold=sumColumnByHeader(sheet,'枚数');
+      const previousSold=ticketTotalSold-ticketQty;
+      if(previousSold<TICKET_ALERT_THRESHOLD&&ticketTotalSold>=TICKET_ALERT_THRESHOLD){
+        MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【重要】一般チケット（Web販売分）の申込が'+TICKET_ALERT_THRESHOLD+'枚に到達しました',body:'一般チケット（Web販売分）の累計申込枚数が'+TICKET_ALERT_THRESHOLD+'枚に到達しました。\n\n現在の一般チケット累計申込枚数：'+ticketTotalSold+'枚\n※先行チケット分は含みません。\n\n受付を継続するか停止するか、ご確認・ご判断をお願いいたします。\n\n※このメールは一般チケットの累計枚数が'+TICKET_ALERT_THRESHOLD+'枚を超えた際に自動送信されています。'});
+      }
+    }
+    const lines=config.fields.map(function(item){
+      if(type==='ticket'&&item[0]==='amount') return item[1]+'：'+ticketAmountText;
+      if(type==='ticket'&&item[0]==='dueDate') return item[1]+'：'+ticketDueDate;
+      if(type==='ad'&&item[0]==='adSize') return item[1]+'：'+adSizeLabel;
+      if(type==='ad'&&item[0]==='adAmount') return item[1]+'：'+adAmountNum.toLocaleString('ja-JP')+'円';
+      return item[1]+'：'+getFieldValue(e,item);
+    }).join('\n');
+    const officeExtra=type==='ticket'?'\n\n一般チケット累計申込枚数：'+ticketTotalSold+'枚（先行チケット分は含みません）':'';
+    MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】'+config.subject,body:'Webサイトから申込が届きました。\n\n'+lines+officeExtra});
     const reply=e.parameter.email;
     let noteText='';
     if(type==='lei') noteText='\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
+    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+TICKET_SHIPPING_FEE.toLocaleString('ja-JP')+'円\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n【お振込先】\n'+BANK_INFO;
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
     return ContentService.createTextOutput('OK');
   }catch(error){
@@ -84,10 +124,24 @@ function findMatchingSubmission(sheetName,email){
   return null;
 }
 
-function setInvoiceFileId(sheet,rowNum,fileId){
+function setCellByHeader(sheet,rowNum,headerName,value){
   const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
-  const col=headers.indexOf('請求書ファイルID');
-  if(col!==-1) sheet.getRange(rowNum,col+1).setValue(fileId);
+  const col=headers.indexOf(headerName);
+  if(col!==-1) sheet.getRange(rowNum,col+1).setValue(value);
+}
+
+function setInvoiceFileId(sheet,rowNum,fileId){
+  setCellByHeader(sheet,rowNum,'請求書ファイルID',fileId);
+}
+
+function sumColumnByHeader(sheet,headerName){
+  const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+  const col=headers.indexOf(headerName);
+  if(col===-1) return 0;
+  const lastRow=sheet.getLastRow();
+  if(lastRow<2) return 0;
+  const values=sheet.getRange(2,col+1,lastRow-1,1).getValues();
+  return values.reduce(function(sum,row){return sum+(parseInt(row[0],10)||0)},0);
 }
 
 function createInvoicePdf(type,e,sheet,rowNum){
