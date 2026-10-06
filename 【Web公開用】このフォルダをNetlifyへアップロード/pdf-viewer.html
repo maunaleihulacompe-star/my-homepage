@@ -1,0 +1,70 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>PDF閲覧・印刷｜Maunalei 2026</title><link rel="icon" href="assets/images/maunalei-illustration.png"><link rel="stylesheet" href="assets/css/style.css"><link rel="stylesheet" href="assets/css/themes.css">
+<style>
+.pdf-shell{padding:34px 0 56px}
+.pdf-shell h1{margin:0 0 18px;font-size:clamp(22px,4.5vw,32px);text-align:center;color:var(--theme)}
+.pdf-toolbar{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:0 0 22px}
+.pdf-toolbar [hidden]{display:none!important}
+.pdf-toolbar .button{width:auto;min-width:200px;font-size:16px;cursor:pointer}
+.pdf-toolbar button.button{border:0;font-family:inherit}
+.pdf-toolbar button.button.secondary{border:1px solid var(--green)}
+.pdf-status{text-align:center;font-weight:600;margin:0 0 18px}
+.pdf-status.error{color:#c52828}
+.pdf-pages{max-width:900px;margin:0 auto}
+.pdf-pages canvas{display:block;width:100%;height:auto;margin:0 0 16px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+@media(max-width:620px){.pdf-toolbar .button{width:100%;min-width:0}}
+@media print{.site-header,.site-footer,.pdf-toolbar,.pdf-status,.pdf-shell h1{display:none!important}.pdf-shell{padding:0}.pdf-pages{max-width:none}.pdf-pages canvas{margin:0;box-shadow:none;page-break-after:always;break-after:page}.pdf-pages canvas:last-child{page-break-after:auto;break-after:auto}}
+</style></head><body class="pdf-page">
+<header class="site-header"><div class="wrap nav"><a class="brand" href="index.html">Maunalei 2026</a><button class="menu-button" aria-expanded="false" aria-label="メニューを開く">メニュー</button><nav class="nav-links" aria-label="メインナビゲーション"><a href="index.html">HOME</a><a href="ticket.html">チケット申込</a><a href="lei-photo.html">レイ・フォト</a><a href="vendor-ad.html">出店・広告</a><a href="index.html#contact">お問い合わせ</a></nav></div></header>
+<main class="pdf-shell"><div class="wrap">
+<h1 id="docTitle">PDF</h1>
+<div class="pdf-toolbar"><button class="button" id="printBtn" type="button">印刷する</button><a class="button secondary" id="dlBtn" href="#" download>ダウンロード</a><a class="button secondary" id="backBtn" href="index.html">元のページに戻る</a></div>
+<p class="pdf-status" id="pdfStatus" role="status">読み込み中です…</p>
+<div class="pdf-pages" id="pdfPages"></div>
+<noscript><p class="pdf-status error">JavaScriptを有効にしてください。または「ダウンロード」からPDFを保存してご覧ください。</p></noscript>
+</div></main>
+<footer class="site-footer"><div>第10回 Maunalei Hula Competition 2026</div><a href="privacy.html">プライバシーポリシー</a></footer>
+<script src="assets/js/main.js"></script>
+<script src="assets/vendor/pdfjs/pdf.min.js"></script>
+<script>
+(function(){
+  var DOCS={
+    lei:{title:'レイ・コンテスト 参加規程',file:'assets/docs/lei-rules.pdf',theme:'theme-lei-photo',back:'lei-photo.html'},
+    photo:{title:'フォト・コンテスト 参加規程',file:'assets/docs/photo-rules.pdf',theme:'theme-lei-photo',back:'lei-photo.html'},
+    vendor:{title:'会場出店 申込書',file:'assets/docs/vendor-ad-guide.pdf',page:1,theme:'theme-vendor',back:'vendor-ad.html'},
+    ad:{title:'プログラム広告掲載 申込書',file:'assets/docs/vendor-ad-guide.pdf',page:2,theme:'theme-vendor',back:'vendor-ad.html'},
+    guide:{title:'出店・広告のご案内',file:'assets/docs/vendor-ad-guide.pdf',theme:'theme-vendor',back:'vendor-ad.html'}
+  };
+  var key=new URLSearchParams(location.search).get('doc');
+  var doc=DOCS[key];
+  var status=document.getElementById('pdfStatus');
+  var holder=document.getElementById('pdfPages');
+  if(!doc){status.className='pdf-status error';status.textContent='表示するPDFが指定されていません。前のページからもう一度お試しください。';document.getElementById('docTitle').textContent='PDF閲覧・印刷';document.getElementById('printBtn').hidden=true;document.getElementById('dlBtn').hidden=true;return}
+  document.body.classList.add(doc.theme);
+  document.title=doc.title+'｜Maunalei 2026';
+  document.getElementById('docTitle').textContent=doc.title;
+  document.getElementById('dlBtn').href=doc.file;
+  document.getElementById('backBtn').href=doc.back;
+  document.getElementById('printBtn').addEventListener('click',function(){window.print()});
+  function fail(){status.className='pdf-status error';status.innerHTML='PDFを表示できませんでした。お手数ですが、<a href="'+doc.file+'" download>こちらからダウンロード</a>してご覧ください。'}
+  if(!window.pdfjsLib){fail();return}
+  pdfjsLib.GlobalWorkerOptions.workerSrc='assets/vendor/pdfjs/pdf.worker.min.js';
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  pdfjsLib.getDocument({url:doc.file,cMapUrl:'assets/vendor/pdfjs/cmaps/',cMapPacked:true}).promise.then(function(pdf){
+    var pages=doc.page?[doc.page]:Array.from({length:pdf.numPages},function(_,i){return i+1});
+    var cssWidth=Math.min(holder.clientWidth||900,900);
+    var chain=Promise.resolve();
+    pages.forEach(function(n){
+      chain=chain.then(function(){return pdf.getPage(n)}).then(function(page){
+        var base=page.getViewport({scale:1});
+        var scale=(cssWidth/base.width)*Math.max(dpr,1.5);
+        var vp=page.getViewport({scale:scale});
+        var canvas=document.createElement('canvas');
+        canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);
+        holder.appendChild(canvas);
+        return page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+      });
+    });
+    return chain;
+  }).then(function(){status.textContent='';status.hidden=true}).catch(fail);
+})();
+</script></body></html>
