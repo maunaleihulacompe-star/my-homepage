@@ -5,7 +5,9 @@ const BANK_INFO = 'ゆうちょ銀行\n記号：15480　番号：38175201\n（�
 const OFFICE_INFO = 'マウナレイフラコンペティション事務局\n〒700-0822 岡山県岡山市北区表町3-18-52 吉本ビル4F ハウオリーズ マサコ アケタ フラスタジオ内\nTel：086-231-2314　Fax：086-231-2324\nE-mail：maunaleihulacompe@gmail.com';
 const TICKET_PRICE = 7000;
 const TICKET_SHIPPING_FEE = 500;
-const TICKET_ALERT_THRESHOLD = 150;
+const TICKET_CAPACITY = 409;
+const TICKET_ALERT_LEVELS = [380,409];
+const PRESALE_SHEET_NAME = '先行チケット';
 
 const FORM_CONFIG = {
   lei: {sheet:'レイ申込',subject:'レイ・コンテスト申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['workTitle','作品タイトル'],['leiStyle','レイのスタイル'],['deliveryMethod','提出方法'],['materials','主な花材'],['comment','作品コメント'],['agreement','規程への同意']]},
@@ -53,6 +55,8 @@ function doPost(e){
     let ticketDueDate='';
     let ticketQty=0;
     let ticketTotalSold=0;
+    let ticketWebSold=0;
+    let ticketPresaleSold=0;
     if(type==='ticket'){
       ticketQty=parseInt(e.parameter.quantity,10);
       if(!ticketQty||ticketQty<1) ticketQty=1;
@@ -62,11 +66,16 @@ function doPost(e){
       ticketDueDate=Utilities.formatDate(due,'Asia/Tokyo','yyyy年MM月dd日');
       setCellByHeader(sheet,rowNum,'合計金額',amount);
       setCellByHeader(sheet,rowNum,'お振込期限',ticketDueDate);
-      ticketTotalSold=sumColumnByHeader(sheet,'枚数');
+      ticketWebSold=sumColumnByHeader(sheet,'枚数');
+      ticketPresaleSold=sumPresaleTickets(ss);
+      ticketTotalSold=ticketWebSold+ticketPresaleSold;
       const previousSold=ticketTotalSold-ticketQty;
-      if(previousSold<TICKET_ALERT_THRESHOLD&&ticketTotalSold>=TICKET_ALERT_THRESHOLD){
-        MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【重要】一般チケット（Web販売分）の申込が'+TICKET_ALERT_THRESHOLD+'枚に到達しました',body:'一般チケット（Web販売分）の累計申込枚数が'+TICKET_ALERT_THRESHOLD+'枚に到達しました。\n\n現在の一般チケット累計申込枚数：'+ticketTotalSold+'枚\n※先行チケット分は含みません。\n\n受付を継続するか停止するか、ご確認・ご判断をお願いいたします。\n\n※このメールは一般チケットの累計枚数が'+TICKET_ALERT_THRESHOLD+'枚を超えた際に自動送信されています。'});
-      }
+      TICKET_ALERT_LEVELS.forEach(function(level){
+        if(previousSold<level&&ticketTotalSold>=level){
+          const soldOut=level>=TICKET_CAPACITY;
+          MailApp.sendEmail({to:NOTIFY_EMAIL,subject:soldOut?'【満席】観覧チケットが定員'+TICKET_CAPACITY+'席に達しました':'【重要】観覧チケットが残り'+(TICKET_CAPACITY-level)+'席になりました',body:(soldOut?'観覧チケットの累計申込枚数が定員（'+TICKET_CAPACITY+'席）に達しました。':'観覧チケットの累計申込枚数が'+level+'枚に到達しました。')+'\n\n'+ticketStatusText(ticketTotalSold,ticketPresaleSold,ticketWebSold)+'\n\n受付を継続するか停止するか、ご確認・ご判断をお願いいたします。\n\n※このメールは累計枚数が'+level+'枚を超えた際に自動送信されています。'});
+        }
+      });
     }
     const lines=config.fields.map(function(item){
       if(type==='ticket'&&item[0]==='amount') return item[1]+'：'+ticketAmountText;
@@ -75,7 +84,7 @@ function doPost(e){
       if(type==='ad'&&item[0]==='adAmount') return item[1]+'：'+adAmountNum.toLocaleString('ja-JP')+'円';
       return item[1]+'：'+getFieldValue(e,item);
     }).join('\n');
-    const officeExtra=type==='ticket'?'\n\n一般チケット累計申込枚数：'+ticketTotalSold+'枚（先行チケット分は含みません）':'';
+    const officeExtra=type==='ticket'?'\n\n'+ticketStatusText(ticketTotalSold,ticketPresaleSold,ticketWebSold):'';
     MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】'+config.subject,body:'Webサイトから申込が届きました。\n\n'+lines+officeExtra});
     const reply=e.parameter.email;
     let noteText='';
@@ -132,6 +141,29 @@ function setCellByHeader(sheet,rowNum,headerName,value){
 
 function setInvoiceFileId(sheet,rowNum,fileId){
   setCellByHeader(sheet,rowNum,'請求書ファイルID',fileId);
+}
+
+function sumPresaleTickets(ss){
+  const sheet=ss.getSheetByName(PRESALE_SHEET_NAME);
+  if(!sheet||sheet.getLastRow()<2) return 0;
+  const data=sheet.getDataRange().getValues();
+  const headers=data[0];
+  const nameCol=headers.indexOf('ハーラウ名');
+  const qtyCol=headers.indexOf('枚数');
+  if(nameCol===-1||qtyCol===-1) return 0;
+  let sum=0;
+  for(let r=1;r<data.length;r++){
+    const name=String(data[r][nameCol]||'').trim();
+    if(!name||name==='合計') continue;
+    sum+=parseInt(data[r][qtyCol],10)||0;
+  }
+  return sum;
+}
+
+function ticketStatusText(total,presale,web){
+  const remaining=TICKET_CAPACITY-total;
+  const remainText=remaining>=0?'残り席数：'+remaining+'席':'残り席数：定員を'+(-remaining)+'枚超過しています';
+  return '累計申込枚数：'+total+'枚（先行チケット'+presale+'枚＋一般チケット'+web+'枚）\n'+remainText+'（定員'+TICKET_CAPACITY+'席）';
 }
 
 function sumColumnByHeader(sheet,headerName){
