@@ -3,6 +3,7 @@ const NOTIFY_EMAIL = 'maunaleihulacompe@gmail.com';
 const INVOICE_FOLDER_NAME = 'Maunalei2026_請求書';
 const BANK_INFO = 'ゆうちょ銀行\n記号：15480　番号：38175201\n（普通：五四八店　3817520）\n口座名義：マウナレイフラコンペティション事務局（マウナレイフラコンペティションジムキョク）\n※恐れ入りますが、振込手数料はご負担くださいますようお願いいたします。';
 const OFFICE_INFO = 'マウナレイフラコンペティション事務局\n〒700-0822 岡山県岡山市北区表町3-18-52 吉本ビル4F ハウオリーズ マサコ アケタ フラスタジオ内\nTel：086-231-2314　Fax：086-231-2324\nE-mail：maunaleihulacompe@gmail.com';
+const LEI_FEE = 5000;
 const TICKET_PRICE = 7000;
 const TICKET_SHIPPING_FEE = 500;
 const TICKET_CAPACITY = 409;
@@ -88,7 +89,7 @@ function doPost(e){
     MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】'+config.subject,body:'Webサイトから申込が届きました。\n\n'+lines+officeExtra});
     const reply=e.parameter.email;
     let noteText='';
-    if(type==='lei') noteText='\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
+    if(type==='lei') noteText='\n\n【参加費・お振込先】\n参加費（合計）：'+LEI_FEE.toLocaleString('ja-JP')+'円\n\n【お振込先】\n'+BANK_INFO+'\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
     if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+TICKET_SHIPPING_FEE.toLocaleString('ja-JP')+'円\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n【お振込先】\n'+BANK_INFO;
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
     return ContentService.createTextOutput('OK');
