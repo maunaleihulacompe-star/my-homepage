@@ -6,6 +6,8 @@ const OFFICE_INFO = 'マウナレイフラコンペティション事務局\n〒
 const LEI_FEE = 5000;
 const TICKET_PRICE = 7000;
 const TICKET_SHIPPING_FEE = 500;
+const TICKET_CLOSE_AT = new Date('2026-11-21T00:00:00+09:00');
+const TICKET_DUE_LIMIT = new Date('2026-11-20T23:59:59+09:00');
 const TICKET_CAPACITY = 409;
 const TICKET_ALERT_LEVELS = [380,409];
 const PRESALE_SHEET_NAME = '先行チケット';
@@ -29,6 +31,11 @@ function doPost(e){
     const type=e.parameter.formType;
     const config=FORM_CONFIG[type];
     if(!config) throw new Error('不明なフォームです');
+    if(type==='ticket'&&new Date().getTime()>=TICKET_CLOSE_AT.getTime()){
+      const closedLines=config.fields.map(function(item){return item[1]+'：'+getFieldValue(e,item)}).join('\n');
+      MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】受付終了後のチケット申込（未登録）',body:'チケット申込の受付終了後にフォームから送信がありました。スプレッドシートには記録していません。電話等で対応が必要な場合は、以下の内容をご確認ください。\n\n'+closedLines});
+      return ContentService.createTextOutput('CLOSED');
+    }
     const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet=ss.getSheetByName(config.sheet)||ss.insertSheet(config.sheet);
     const headers=['受付日時'].concat(config.fields.map(item=>item[1]));
@@ -55,18 +62,24 @@ function doPost(e){
     let ticketAmountText='';
     let ticketDueDate='';
     let ticketQty=0;
+    let ticketDelivery='';
+    let ticketShippingFee=0;
     let ticketTotalSold=0;
     let ticketWebSold=0;
     let ticketPresaleSold=0;
     if(type==='ticket'){
       ticketQty=parseInt(e.parameter.quantity,10);
       if(!ticketQty||ticketQty<1) ticketQty=1;
-      const amount=ticketQty*TICKET_PRICE+TICKET_SHIPPING_FEE;
-      const due=new Date(Date.now()+14*24*60*60*1000);
+      ticketDelivery=e.parameter.deliveryMethod==='当日受付で受け渡し'?'当日受付で受け渡し':'郵送希望';
+      ticketShippingFee=ticketDelivery==='郵送希望'?TICKET_SHIPPING_FEE:0;
+      const amount=ticketQty*TICKET_PRICE+ticketShippingFee;
+      let due=new Date(Date.now()+14*24*60*60*1000);
+      if(due.getTime()>TICKET_DUE_LIMIT.getTime()) due=TICKET_DUE_LIMIT;
       ticketAmountText=amount.toLocaleString('ja-JP')+'円';
       ticketDueDate=Utilities.formatDate(due,'Asia/Tokyo','yyyy年MM月dd日');
       setCellByHeader(sheet,rowNum,'合計金額',amount);
       setCellByHeader(sheet,rowNum,'お振込期限',ticketDueDate);
+      setCellByHeaderOrCreate(sheet,rowNum,'受け取り方法',ticketDelivery);
       ticketWebSold=sumColumnByHeader(sheet,'枚数');
       ticketPresaleSold=sumPresaleTickets(ss);
       ticketTotalSold=ticketWebSold+ticketPresaleSold;
@@ -78,19 +91,20 @@ function doPost(e){
         }
       });
     }
-    const lines=config.fields.map(function(item){
+    let lines=config.fields.map(function(item){
       if(type==='ticket'&&item[0]==='amount') return item[1]+'：'+ticketAmountText;
       if(type==='ticket'&&item[0]==='dueDate') return item[1]+'：'+ticketDueDate;
       if(type==='ad'&&item[0]==='adSize') return item[1]+'：'+adSizeLabel;
       if(type==='ad'&&item[0]==='adAmount') return item[1]+'：'+adAmountNum.toLocaleString('ja-JP')+'円';
       return item[1]+'：'+getFieldValue(e,item);
     }).join('\n');
+    if(type==='ticket') lines+='\n受け取り方法：'+ticketDelivery;
     const officeExtra=type==='ticket'?'\n\n'+ticketStatusText(ticketTotalSold,ticketPresaleSold,ticketWebSold):'';
     MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】'+config.subject,body:'Webサイトから申込が届きました。\n\n'+lines+officeExtra});
     const reply=e.parameter.email;
     let noteText='';
     if(type==='lei') noteText='\n\n【参加費・お振込先】\n参加費（合計）：'+LEI_FEE.toLocaleString('ja-JP')+'円\n\n【お振込先】\n'+BANK_INFO+'\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
-    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+TICKET_SHIPPING_FEE.toLocaleString('ja-JP')+'円\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n【お振込先】\n'+BANK_INFO;
+    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
     return ContentService.createTextOutput('OK');
   }catch(error){
@@ -138,6 +152,16 @@ function setCellByHeader(sheet,rowNum,headerName,value){
   const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
   const col=headers.indexOf(headerName);
   if(col!==-1) sheet.getRange(rowNum,col+1).setValue(value);
+}
+
+function setCellByHeaderOrCreate(sheet,rowNum,headerName,value){
+  const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+  let col=headers.indexOf(headerName);
+  if(col===-1){
+    col=headers.length;
+    sheet.getRange(1,col+1).setValue(headerName);
+  }
+  sheet.getRange(rowNum,col+1).setValue(value);
 }
 
 function setInvoiceFileId(sheet,rowNum,fileId){
