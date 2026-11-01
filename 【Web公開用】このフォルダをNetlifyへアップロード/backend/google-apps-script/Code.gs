@@ -104,7 +104,7 @@ function doPost(e){
     const reply=e.parameter.email;
     let noteText='';
     if(type==='lei') noteText='\n\n【参加費・お振込先】\n参加費（合計）：'+LEI_FEE.toLocaleString('ja-JP')+'円\n\n【お振込先】\n'+BANK_INFO+'\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
-    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
+    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'\n※郵送をご希望の方は、お振込みが確認できた後、発送いたします。':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
     return ContentService.createTextOutput('OK');
   }catch(error){
