@@ -11,6 +11,10 @@ const TICKET_DUE_LIMIT = new Date('2026-11-20T23:59:59+09:00');
 const TICKET_CAPACITY = 409;
 const TICKET_ALERT_LEVELS = [380,409];
 const PRESALE_SHEET_NAME = '先行チケット';
+const DVD_BLURAY_PRICE = 9000;
+const DVD_PRICE = 7000;
+const DVD_SHIPPING_FEE = 500;
+const DVD_CLOSE_AT = new Date('2026-12-19T00:00:00+09:00');
 
 const FORM_CONFIG = {
   lei: {sheet:'レイ申込',subject:'レイ・コンテスト申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['workTitle','作品タイトル'],['leiStyle','レイのスタイル'],['deliveryMethod','提出方法'],['materials','主な花材'],['comment','作品コメント'],['agreement','規程への同意']]},
@@ -18,7 +22,8 @@ const FORM_CONFIG = {
   vendor: {sheet:'出店申込',subject:'会場出店申込',fields:[['businessName','出店登録名'],['businessKana','フリガナ'],['representative','代表者名'],['representativeKana','代表者フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['vendorType','出店形態'],['products','出店内容・取扱商品'],['notes','備考'],['agreement','案内への同意'],['invoiceFileId','請求書ファイルID']]},
   ad: {sheet:'広告申込',subject:'プログラム広告掲載申込',fields:[['companyName','社名'],['companyKana','フリガナ'],['contactName','担当者名'],['contactKana','担当者フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['adSize','広告サイズ'],['adAmount','広告掲載料'],['notes','備考'],['agreement','案内への同意'],['invoiceFileId','請求書ファイルID']]},
   competition: {sheet:'コンペ申込',subject:'コンペ・エキシビション申込',fields:[['harauName','ハラウ名'],['repLastName','代表者氏名（姓）'],['repFirstName','代表者氏名（名）'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['soloCategories','Soloエントリー','multi'],['groupCategories','Groupエントリー','multi'],['exhibition','エキシビションエントリー'],['notes','備考'],['agreement','参加規程への同意']]},
-  ticket: {sheet:'チケット申込',subject:'チケット申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['quantity','枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]}
+  ticket: {sheet:'チケット申込',subject:'チケット申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['quantity','枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]},
+  dvd: {sheet:'DVD販売',subject:'DVD・Blu-ray申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['blurayQty','Blu-ray枚数'],['dvdQty','DVD枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]}
 };
 
 function getFieldValue(e,item){
@@ -34,6 +39,11 @@ function doPost(e){
     if(type==='ticket'&&new Date().getTime()>=TICKET_CLOSE_AT.getTime()){
       const closedLines=config.fields.map(function(item){return item[1]+'：'+getFieldValue(e,item)}).join('\n');
       MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】受付終了後のチケット申込（未登録）',body:'チケット申込の受付終了後にフォームから送信がありました。スプレッドシートには記録していません。電話等で対応が必要な場合は、以下の内容をご確認ください。\n\n'+closedLines});
+      return ContentService.createTextOutput('CLOSED');
+    }
+    if(type==='dvd'&&new Date().getTime()>=DVD_CLOSE_AT.getTime()){
+      const dvdClosedLines=config.fields.map(function(item){return item[1]+'：'+getFieldValue(e,item)}).join('\n');
+      MailApp.sendEmail({to:NOTIFY_EMAIL,subject:'【Web申込】受付終了後のDVD・Blu-ray申込（未登録）',body:'DVD・Blu-ray申込の受付終了後にフォームから送信がありました。スプレッドシートには記録していません。電話等で対応が必要な場合は、以下の内容をご確認ください。\n\n'+dvdClosedLines});
       return ContentService.createTextOutput('CLOSED');
     }
     const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -91,9 +101,27 @@ function doPost(e){
         }
       });
     }
+    let dvdBluray=0;
+    let dvdDisc=0;
+    let dvdShipping=0;
+    let dvdAmountText='';
+    let dvdDueDate='';
+    if(type==='dvd'){
+      dvdBluray=Math.max(0,parseInt(e.parameter.blurayQty,10)||0);
+      dvdDisc=Math.max(0,parseInt(e.parameter.dvdQty,10)||0);
+      dvdShipping=(dvdBluray+dvdDisc)>0?DVD_SHIPPING_FEE:0;
+      const dvdAmount=dvdBluray*DVD_BLURAY_PRICE+dvdDisc*DVD_PRICE+dvdShipping;
+      const dvdDue=new Date(Date.now()+14*24*60*60*1000);
+      dvdAmountText=dvdAmount.toLocaleString('ja-JP')+'円';
+      dvdDueDate=Utilities.formatDate(dvdDue,'Asia/Tokyo','yyyy年MM月dd日');
+      setCellByHeader(sheet,rowNum,'合計金額',dvdAmount);
+      setCellByHeader(sheet,rowNum,'お振込期限',dvdDueDate);
+    }
     let lines=config.fields.map(function(item){
       if(type==='ticket'&&item[0]==='amount') return item[1]+'：'+ticketAmountText;
       if(type==='ticket'&&item[0]==='dueDate') return item[1]+'：'+ticketDueDate;
+      if(type==='dvd'&&item[0]==='amount') return item[1]+'：'+dvdAmountText;
+      if(type==='dvd'&&item[0]==='dueDate') return item[1]+'：'+dvdDueDate;
       if(type==='ad'&&item[0]==='adSize') return item[1]+'：'+adSizeLabel;
       if(type==='ad'&&item[0]==='adAmount') return item[1]+'：'+adAmountNum.toLocaleString('ja-JP')+'円';
       return item[1]+'：'+getFieldValue(e,item);
@@ -105,6 +133,12 @@ function doPost(e){
     let noteText='';
     if(type==='lei') noteText='\n\n【参加費・お振込先】\n参加費（合計）：'+LEI_FEE.toLocaleString('ja-JP')+'円\n\n【お振込先】\n'+BANK_INFO+'\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
     if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'\n※郵送をご希望の方は、お振込みが確認できた後、発送いたします。':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
+    if(type==='dvd'){
+      const dvdItemLines=[];
+      if(dvdBluray>0) dvdItemLines.push('大会Blu-ray：'+DVD_BLURAY_PRICE.toLocaleString('ja-JP')+'円 × '+dvdBluray+'枚 ＝ '+(dvdBluray*DVD_BLURAY_PRICE).toLocaleString('ja-JP')+'円（税込）');
+      if(dvdDisc>0) dvdItemLines.push('大会DVD：'+DVD_PRICE.toLocaleString('ja-JP')+'円 × '+dvdDisc+'枚 ＝ '+(dvdDisc*DVD_PRICE).toLocaleString('ja-JP')+'円（税込）');
+      noteText='\n\n【お支払いについて】\n'+dvdItemLines.join('\n')+'\n送料：'+dvdShipping.toLocaleString('ja-JP')+'円\n【合計金額】'+dvdAmountText+'\nお振込期限：'+dvdDueDate+'\n\n※お支払いはお振込みのみとなります。\n※商品は、お振込みが確認できた後、出来上がり次第発送いたします。\n※ご入金後の変更・払い戻しはいたしかねます。\n\n【お振込先】\n'+BANK_INFO;
+    }
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
     return ContentService.createTextOutput('OK');
   }catch(error){
