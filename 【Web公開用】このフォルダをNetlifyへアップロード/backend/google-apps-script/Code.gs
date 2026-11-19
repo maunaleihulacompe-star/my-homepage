@@ -71,6 +71,7 @@ function doPost(e){
     }
     let ticketAmountText='';
     let ticketDueDate='';
+    let ticketDueLabel='';
     let ticketQty=0;
     let ticketDelivery='';
     let ticketShippingFee=0;
@@ -87,6 +88,7 @@ function doPost(e){
       if(due.getTime()>TICKET_DUE_LIMIT.getTime()) due=TICKET_DUE_LIMIT;
       ticketAmountText=amount.toLocaleString('ja-JP')+'円';
       ticketDueDate=Utilities.formatDate(due,'Asia/Tokyo','yyyy年MM月dd日');
+      ticketDueLabel=formatDueLabel(due);
       setCellByHeader(sheet,rowNum,'合計金額',amount);
       setCellByHeader(sheet,rowNum,'お振込期限',ticketDueDate);
       setCellByHeaderOrCreate(sheet,rowNum,'受け取り方法',ticketDelivery);
@@ -106,6 +108,7 @@ function doPost(e){
     let dvdShipping=0;
     let dvdAmountText='';
     let dvdDueDate='';
+    let dvdDueLabel='';
     if(type==='dvd'){
       dvdBluray=Math.max(0,parseInt(e.parameter.blurayQty,10)||0);
       dvdDisc=Math.max(0,parseInt(e.parameter.dvdQty,10)||0);
@@ -114,6 +117,7 @@ function doPost(e){
       const dvdDue=new Date(Date.now()+14*24*60*60*1000);
       dvdAmountText=dvdAmount.toLocaleString('ja-JP')+'円';
       dvdDueDate=Utilities.formatDate(dvdDue,'Asia/Tokyo','yyyy年MM月dd日');
+      dvdDueLabel=formatDueLabel(dvdDue);
       setCellByHeader(sheet,rowNum,'合計金額',dvdAmount);
       setCellByHeader(sheet,rowNum,'お振込期限',dvdDueDate);
     }
@@ -132,12 +136,12 @@ function doPost(e){
     const reply=e.parameter.email;
     let noteText='';
     if(type==='lei') noteText='\n\n【参加費・お振込先】\n参加費（合計）：'+LEI_FEE.toLocaleString('ja-JP')+'円\n\n【お振込先】\n'+BANK_INFO+'\n\n【ご注意】\n作品と【作品の説明文】は、2026年11月27日（金）午前中までに事務局へお届けください（生花のため、この日より前はお預かりできません）。\n【作品の説明文】は、大会公式サイトの参加規程PDFを印刷し、必要事項をご記入のうえご用意ください。';
-    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\nお振込期限：'+ticketDueDate+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'\n※郵送をご希望の方は、お振込みが確認できた後、発送いたします。':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
+    if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\n\n'+dueBlock(ticketDueLabel)+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'\n※郵送をご希望の方は、お振込みが確認できた後、発送いたします。':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
     if(type==='dvd'){
       const dvdItemLines=[];
       if(dvdBluray>0) dvdItemLines.push('大会Blu-ray：'+DVD_BLURAY_PRICE.toLocaleString('ja-JP')+'円 × '+dvdBluray+'枚 ＝ '+(dvdBluray*DVD_BLURAY_PRICE).toLocaleString('ja-JP')+'円（税込）');
       if(dvdDisc>0) dvdItemLines.push('大会DVD：'+DVD_PRICE.toLocaleString('ja-JP')+'円 × '+dvdDisc+'枚 ＝ '+(dvdDisc*DVD_PRICE).toLocaleString('ja-JP')+'円（税込）');
-      noteText='\n\n【お支払いについて】\n'+dvdItemLines.join('\n')+'\n送料：'+dvdShipping.toLocaleString('ja-JP')+'円\n【合計金額】'+dvdAmountText+'\nお振込期限：'+dvdDueDate+'\n\n※お支払いはお振込みのみとなります。\n※商品は、お振込みが確認できた後、出来上がり次第発送いたします。\n※ご入金後の変更・払い戻しはいたしかねます。\n\n【お振込先】\n'+BANK_INFO;
+      noteText='\n\n【お支払いについて】\n'+dvdItemLines.join('\n')+'\n送料：'+dvdShipping.toLocaleString('ja-JP')+'円\n【合計金額】'+dvdAmountText+'\n\n'+dueBlock(dvdDueLabel)+'\n\n※お支払いはお振込みのみとなります。\n※商品は、お振込みが確認できた後、出来上がり次第発送いたします。\n※ご入金後の変更・払い戻しはいたしかねます。\n\n【お振込先】\n'+BANK_INFO;
     }
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
     return ContentService.createTextOutput('OK');
@@ -145,6 +149,16 @@ function doPost(e){
     MailApp.sendEmail(NOTIFY_EMAIL,'【Maunalei】フォーム送信エラー',String(error));
     return ContentService.createTextOutput('ERROR');
   }
+}
+
+function formatDueLabel(date){
+  const week=['月','火','水','木','金','土','日'][parseInt(Utilities.formatDate(date,'Asia/Tokyo','u'),10)-1];
+  return Utilities.formatDate(date,'Asia/Tokyo','yyyy年M月d日')+'（'+week+'）';
+}
+
+function dueBlock(label){
+  const bar='━━━━━━━━━━━━━━━━━━━━';
+  return bar+'\n■ お振込期限\n　'+label+' まで\n'+bar;
 }
 
 function escapeHtml(text){
