@@ -240,6 +240,7 @@ function appendDvdRow(ss,d){
     sheet.getRange(1,dueCol+1).setValue('お振込期限');
   }
   sheet.getRange(newRow,dueCol+1).setValue(d.dueDate);
+  sheet.getRange(newRow,1,1,sheet.getLastColumn()).setFontWeight('normal');
   return newRow;
 }
 
