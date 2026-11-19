@@ -23,7 +23,7 @@ const FORM_CONFIG = {
   ad: {sheet:'広告申込',subject:'プログラム広告掲載申込',fields:[['companyName','社名'],['companyKana','フリガナ'],['contactName','担当者名'],['contactKana','担当者フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['fax','FAX番号'],['email','メールアドレス'],['adSize','広告サイズ'],['adAmount','広告掲載料'],['notes','備考'],['agreement','案内への同意'],['invoiceFileId','請求書ファイルID']]},
   competition: {sheet:'コンペ申込',subject:'コンペ・エキシビション申込',fields:[['harauName','ハラウ名'],['repLastName','代表者氏名（姓）'],['repFirstName','代表者氏名（名）'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['soloCategories','Soloエントリー','multi'],['groupCategories','Groupエントリー','multi'],['exhibition','エキシビションエントリー'],['notes','備考'],['agreement','参加規程への同意']]},
   ticket: {sheet:'チケット申込',subject:'チケット申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['quantity','枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]},
-  dvd: {sheet:'DVD販売',subject:'DVD・Blu-ray申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['blurayQty','Blu-ray枚数'],['dvdQty','DVD枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]}
+  dvd: {sheet:'DVD・Blu-ray申込',subject:'DVD・Blu-ray申込',fields:[['applicantName','申込者名'],['furigana','フリガナ'],['postalCode','郵便番号'],['address','住所'],['phone','電話番号'],['email','メールアドレス'],['blurayQty','Blu-ray枚数'],['dvdQty','DVD枚数'],['notes','備考'],['agreement','同意'],['amount','合計金額'],['dueDate','お振込期限']]}
 };
 
 function getFieldValue(e,item){
@@ -47,18 +47,22 @@ function doPost(e){
       return ContentService.createTextOutput('CLOSED');
     }
     const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet=ss.getSheetByName(config.sheet)||ss.insertSheet(config.sheet);
-    const headers=['受付日時'].concat(config.fields.map(item=>item[1]));
-    if(sheet.getLastRow()===0){
-      sheet.appendRow(headers);
-    }else{
-      const existing=sheet.getRange(1,1,1,Math.max(sheet.getLastColumn(),headers.length)).getValues()[0];
-      const isSame=headers.every((h,i)=>existing[i]===h);
-      if(!isSame) sheet.getRange(1,1,1,headers.length).setValues([headers]);
+    let sheet=null;
+    let rowNum=0;
+    if(type!=='dvd'){
+      sheet=ss.getSheetByName(config.sheet)||ss.insertSheet(config.sheet);
+      const headers=['受付日時'].concat(config.fields.map(item=>item[1]));
+      if(sheet.getLastRow()===0){
+        sheet.appendRow(headers);
+      }else{
+        const existing=sheet.getRange(1,1,1,Math.max(sheet.getLastColumn(),headers.length)).getValues()[0];
+        const isSame=headers.every((h,i)=>existing[i]===h);
+        if(!isSame) sheet.getRange(1,1,1,headers.length).setValues([headers]);
+      }
+      const values=[new Date()].concat(config.fields.map(item=>getFieldValue(e,item)));
+      sheet.appendRow(values);
+      rowNum=sheet.getLastRow();
     }
-    const values=[new Date()].concat(config.fields.map(item=>getFieldValue(e,item)));
-    sheet.appendRow(values);
-    const rowNum=sheet.getLastRow();
     if(type==='vendor'||type==='ad') createInvoicePdf(type,e,sheet,rowNum);
     let adSizeLabel='';
     let adAmountNum=0;
@@ -118,8 +122,20 @@ function doPost(e){
       dvdAmountText=dvdAmount.toLocaleString('ja-JP')+'円';
       dvdDueDate=Utilities.formatDate(dvdDue,'Asia/Tokyo','yyyy年MM月dd日');
       dvdDueLabel=formatDueLabel(dvdDue);
-      setCellByHeader(sheet,rowNum,'合計金額',dvdAmount);
-      setCellByHeader(sheet,rowNum,'お振込期限',dvdDueDate);
+      appendDvdRow(ss,{
+        name:e.parameter.applicantName||'',
+        furigana:e.parameter.furigana||'',
+        postalCode:e.parameter.postalCode||'',
+        address:e.parameter.address||'',
+        phone:e.parameter.phone||'',
+        email:e.parameter.email||'',
+        bluray:dvdBluray,
+        dvd:dvdDisc,
+        shipping:dvdShipping,
+        amount:dvdAmount,
+        notes:e.parameter.notes||'',
+        dueDate:dvdDueDate
+      });
     }
     let lines=config.fields.map(function(item){
       if(type==='ticket'&&item[0]==='amount') return item[1]+'：'+ticketAmountText;
@@ -149,6 +165,82 @@ function doPost(e){
     MailApp.sendEmail(NOTIFY_EMAIL,'【Maunalei】フォーム送信エラー',String(error));
     return ContentService.createTextOutput('ERROR');
   }
+}
+
+function appendDvdRow(ss,d){
+  const sheet=ss.getSheetByName('DVD・Blu-ray申込');
+  if(!sheet) throw new Error('「DVD・Blu-ray申込」シートが見つかりません');
+  const lastCol=sheet.getLastColumn();
+  const headers=sheet.getRange(1,1,1,lastCol).getValues()[0];
+  const lastRow=sheet.getLastRow();
+  const colA=sheet.getRange(1,1,lastRow,1).getValues();
+  let totalRow=-1;
+  for(let r=1;r<colA.length;r++){
+    if(String(colA[r][0]).trim()==='合計'){totalRow=r+1;break}
+  }
+  let newRow;
+  if(totalRow>0){
+    sheet.insertRowBefore(totalRow);
+    newRow=totalRow;
+    const prevRow=newRow-1;
+    if(prevRow>=2){
+      sheet.getRange(prevRow,1,1,lastCol).copyTo(sheet.getRange(newRow,1,1,lastCol),SpreadsheetApp.CopyPasteType.PASTE_FORMAT,false);
+      const prevFormulas=sheet.getRange(prevRow,1,1,lastCol).getFormulas()[0];
+      prevFormulas.forEach(function(f,i){
+        if(f) sheet.getRange(prevRow,i+1).copyTo(sheet.getRange(newRow,i+1),SpreadsheetApp.CopyPasteType.PASTE_FORMULA,false);
+      });
+    }
+    const afterRows=sheet.getLastRow()-newRow;
+    if(afterRows>0){
+      const range=sheet.getRange(newRow+1,1,afterRows,lastCol);
+      const formulas=range.getFormulas();
+      for(let r=0;r<formulas.length;r++){
+        for(let c=0;c<formulas[r].length;c++){
+          const f=formulas[r][c];
+          if(!f) continue;
+          const nf=f.replace(/([A-Z]+\$?\d+:\$?[A-Z]+\$?)(\d+)/g,function(m,head,endRow){
+            return parseInt(endRow,10)===newRow-1?head+newRow:m;
+          });
+          if(nf!==f) range.getCell(r+1,c+1).setFormula(nf);
+        }
+      }
+    }
+  }else{
+    newRow=lastRow+1;
+  }
+  function put(name,value,asText){
+    const col=headers.indexOf(name);
+    if(col===-1) return;
+    const cell=sheet.getRange(newRow,col+1);
+    if(asText) cell.setNumberFormat('@');
+    cell.setValue(value);
+  }
+  put('確認日',new Date());
+  put('ハーラウ名',d.name);
+  put('フリガナ',d.furigana);
+  put('郵便番号',d.postalCode,true);
+  put('住所',d.address);
+  put('電話番号',d.phone,true);
+  put('メールアドレス',d.email);
+  if(d.bluray>0){
+    put('Blu-ray個数',d.bluray);
+    put('Blu-ray小計',d.bluray*DVD_BLURAY_PRICE);
+  }
+  if(d.dvd>0){
+    put('DVD個数',d.dvd);
+    put('DVD小計',d.dvd*DVD_PRICE);
+  }
+  put('送料',d.shipping);
+  put('合計',d.amount);
+  put('備考',d.notes);
+  put('ファイル名','Webフォーム申込');
+  let dueCol=headers.indexOf('お振込期限');
+  if(dueCol===-1){
+    dueCol=lastCol;
+    sheet.getRange(1,dueCol+1).setValue('お振込期限');
+  }
+  sheet.getRange(newRow,dueCol+1).setValue(d.dueDate);
+  return newRow;
 }
 
 function formatDueLabel(date){
