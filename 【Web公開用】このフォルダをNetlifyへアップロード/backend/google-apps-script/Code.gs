@@ -155,8 +155,8 @@ function doPost(e){
     if(type==='ticket') noteText='\n\n【お支払いについて】\nチケット代：'+(ticketQty*TICKET_PRICE).toLocaleString('ja-JP')+'円（'+ticketQty+'枚）\n送料：'+(ticketShippingFee>0?ticketShippingFee.toLocaleString('ja-JP')+'円（郵送）':'なし（当日受付で受け渡し）')+'\n【合計金額】'+ticketAmountText+'\n\n'+dueBlock(ticketDueLabel)+'\n\n※お支払いはお振込みのみとなります。当日会場でのお支払いはお受けできません。'+(ticketShippingFee>0?'\n※郵送をご希望の方は、お振込みが確認できた後、発送いたします。':'\n※当日受付でのお受け取りの場合も、事前のお振込みが必要です。')+'\n\n【お振込先】\n'+BANK_INFO;
     if(type==='dvd'){
       const dvdItemLines=[];
-      if(dvdBluray>0) dvdItemLines.push('大会Blu-ray：'+DVD_BLURAY_PRICE.toLocaleString('ja-JP')+'円 × '+dvdBluray+'枚 ＝ '+(dvdBluray*DVD_BLURAY_PRICE).toLocaleString('ja-JP')+'円（税込）');
-      if(dvdDisc>0) dvdItemLines.push('大会DVD：'+DVD_PRICE.toLocaleString('ja-JP')+'円 × '+dvdDisc+'枚 ＝ '+(dvdDisc*DVD_PRICE).toLocaleString('ja-JP')+'円（税込）');
+      if(dvdBluray>0) dvdItemLines.push('Blu-ray：'+DVD_BLURAY_PRICE.toLocaleString('ja-JP')+'円 × '+dvdBluray+'枚 ＝ '+(dvdBluray*DVD_BLURAY_PRICE).toLocaleString('ja-JP')+'円（税込）');
+      if(dvdDisc>0) dvdItemLines.push('DVD：'+DVD_PRICE.toLocaleString('ja-JP')+'円 × '+dvdDisc+'枚 ＝ '+(dvdDisc*DVD_PRICE).toLocaleString('ja-JP')+'円（税込）');
       noteText='\n\n【お支払いについて】\n'+dvdItemLines.join('\n')+'\n送料：'+dvdShipping.toLocaleString('ja-JP')+'円\n【合計金額】'+dvdAmountText+'\n\n'+dueBlock(dvdDueLabel)+'\n\n※お支払いはお振込みのみとなります。\n※商品は、お振込みが確認できた後、出来上がり次第発送いたします。\n※ご入金後の変更・払い戻しはいたしかねます。\n\n【お振込先】\n'+BANK_INFO;
     }
     if(reply) MailApp.sendEmail({to:reply,subject:'【Maunalei】'+config.subject+'を受け付けました',body:'お申し込みありがとうございます。\n以下の内容で受け付けました。\n\n'+lines+noteText+'\n\nマウナレイフラコンペティション事務局'});
